@@ -158,14 +158,10 @@ public final class FLP {
     double mhc = calculateMaterialHandlingCost(map);
     double rc = calculateRelocationCost(map);
 
-    if (!checkhardrestrictions) {
-      return fitness > 0 ? mhc * rc * fitness : rc * mhc;
+    if (checkhardrestrictions && !isValidSolution(list)) {
+      return Double.MAX_VALUE;
     } else {
-      if (!isValidSolution(list)) {
-        return Double.MAX_VALUE;
-      } else {
-        return fitness > 0 ? mhc * rc * fitness : rc * mhc;
-      }
+      return mhc * rc;
     }
   }
 
