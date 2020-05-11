@@ -55,6 +55,7 @@ public final class FLP {
       for (int i = 0; i < list.length; i += 2) {
         list2.add(Pair.of(list[i], list[i + 1]));
       }
+
       return calculateFitness(list2);
     }, lower, upper, parameters.getIterations(), parameters.getPopulationSize());
 
@@ -66,7 +67,7 @@ public final class FLP {
         getChromosomeFacilityBitSize() * getFacilitiesNumber()) {
       @Override
       protected Double calculateFitness(BitArray bitArray) {
-        return FLP.this.calculateFitness(decodeBitArray(bitArray));
+        return FLP.this.calculateFitness(decodeBitArray(bitArray), false);
       }
 
       @Override
@@ -151,12 +152,19 @@ public final class FLP {
     return bitSizeX + bitSizeY;
   }
 
-  private double calculateFitness(List<Pair<Double, Double>> list) {
+  private double calculateFitness(List<Pair<Double, Double>> list, boolean checkhardrestrictions) {
     double fitness = 0.0;
     Map<Period, Map<WorkAreaType, List<WorkArea>>> map = buildStructure(list);
     double mhc = calculateMaterialHandlingCost(map);
     double rc = calculateRelocationCost(map);
-    return fitness > 0 ? mhc * rc * fitness : rc * mhc;
+
+    if (!checkhardrestrictions) {
+      return fitness > 0 ? mhc * rc * fitness : rc * mhc;
+    } else {
+      if (!isValidSolution(list)) {
+        return Double.MAX_VALUE;
+      }
+    }
   }
 
   private Map<Period, Map<WorkAreaType, List<WorkArea>>> buildStructure(

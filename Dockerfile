@@ -6,4 +6,4 @@ RUN mvn package
 FROM openjdk:8-jre-alpine
 WORKDIR /app
 COPY --from=MAVEN_BUILD /build/target/*.jar /app/app.jar
-ENTRYPOINT ["java","-Xms5g","-Xmx10g", "-jar", "app.jar"]
+ENTRYPOINT ["java","-Xms5g -Xmx10g", "-jar", "app.jar"]
