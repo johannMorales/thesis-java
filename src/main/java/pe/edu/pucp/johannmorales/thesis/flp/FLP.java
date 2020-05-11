@@ -158,7 +158,7 @@ public final class FLP {
     double mhc = calculateMaterialHandlingCost(map);
     double rc = calculateRelocationCost(map);
 
-    if (checkhardrestrictions && !isValidSolution(list)) {
+    if (checkhardrestrictions && !isValidSolutionWithStructure(map)) {
       return Double.MAX_VALUE;
     } else {
       return mhc * rc;
@@ -280,6 +280,10 @@ public final class FLP {
 
   private boolean isValidSolution(List<Pair<Double, Double>> list) {
     Map<Period, Map<WorkAreaType, List<WorkArea>>> map = this.buildStructure(list);
+    return isValidSolutionWithStructure(map);
+  }
+
+  private boolean isValidSolutionWithStructure(Map<Period, Map<WorkAreaType, List<WorkArea>>> map) {
     for (Entry<Period, Map<WorkAreaType, List<WorkArea>>> periodMapEntry : map.entrySet()) {
       List<WorkArea> workAreas = new ArrayList<>();
       for (List<WorkArea> ignored : periodMapEntry.getValue().values()) {
