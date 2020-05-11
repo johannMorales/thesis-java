@@ -56,7 +56,7 @@ public final class FLP {
         list2.add(Pair.of(list[i], list[i + 1]));
       }
 
-      return calculateFitness(list2);
+      return calculateFitness(list2, true);
     }, lower, upper, parameters.getIterations(), parameters.getPopulationSize());
 
     return greyWolfAlg.solution();
