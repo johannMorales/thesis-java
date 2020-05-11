@@ -5,5 +5,5 @@ WORKDIR /build/
 RUN mvn package
 FROM openjdk:8-jre-alpine
 WORKDIR /app
-COPY --from=MAVEN_BUILD /build/target/thesis-connector-0.0.1-SNAPSHOT.jar /app/
-ENTRYPOINT ["java", "-jar", "thesis-connector-0.0.1-SNAPSHOT.jar"]
+COPY --from=MAVEN_BUILD /build/target/*.jar /app/app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
