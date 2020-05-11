@@ -287,7 +287,7 @@ public final class FLP {
     for (Entry<Period, Map<WorkAreaType, List<WorkArea>>> periodMapEntry : map.entrySet()) {
       List<WorkArea> workAreas = new ArrayList<>();
       for (List<WorkArea> ignored : periodMapEntry.getValue().values()) {
-        workAreas.addAll(workAreas);
+        workAreas.addAll(ignored);
       }
       if (findIfOverlap(workAreas)) {
         return false;
