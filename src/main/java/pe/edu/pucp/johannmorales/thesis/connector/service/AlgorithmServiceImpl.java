@@ -56,94 +56,10 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     Map<Long, RequestWorkAreaType> requestWorkAreaTypeById = new HashMap<>();
     Map<Process, Set<WorkAreaType>> workAreaTypesByProcess = new HashMap<>();
 
-    for (RequestPeriod rp : request.getPeriods()) {
-      requestPeriodsById.put(rp.getId(), rp);
-      Period p = new Period();
-      p.setId(rp.getId());
-      p.setProcesses(new ArrayList<>());
-      periods.add(p);
-      periodsById.put(p.getId(), p);
-    }
-
-    for (RequestProcess rq : request.getProcesses()) {
-      requestProcessesById.put(rq.getId(), rq);
-      Process p = new Process();
-      p.setId(rq.getId());
-      p.setWorkAreasTypes(new ArrayList<>());
-      processes.add(p);
-      processesById.put(p.getId(), p);
-    }
-
-    for (RequestWorkAreaType rwat : request.getWorkareatypes()) {
-      requestWorkAreaTypeById.put(rwat.getId(), rwat);
-      WorkAreaType wat = new WorkAreaType();
-      wat.setId(rwat.getId());
-      wat.setIsStatic(rwat.getIsStatic());
-      wat.setAmount(rwat.getAmount());
-      wat.setH(rwat.getH().doubleValue());
-      wat.setW(rwat.getW().doubleValue());
-      wat.setRc(rwat.getRc().doubleValue());
-      wat.setMhc(rwat.getMhc().doubleValue());
-      workAreaTypeById.put(wat.getId(), wat);
-    }
-
-    for (RequestProcessPeriod rpp : request.getProcessxperiod()) {
-      if (periodsById.get(rpp.getPeriodId()) == null) {
-        log.error("Couldn't find period with id {}", rpp.getPeriodId());
-      }
-      if (processesById.get(rpp.getProcessId()) == null) {
-        log.error("Couldn't find process with id {}", rpp.getProcessId());
-      }
-      periodsById.get(rpp.getPeriodId()).getProcesses().add(processesById.get(rpp.getProcessId()));
-    }
-
-    for (RequestProcessWorkAreaType rpwat : request.getWorkareatypexprocess()) {
-      if (processesById.get(rpwat.getProcessId()) == null) {
-        log.error("Couldn't find process with id {}", rpwat.getProcessId());
-      }
-      if (workAreaTypeById.get(rpwat.getWorkareatypeId()) == null) {
-        log.error("Couldn't find workAreaType with id {}", rpwat.getWorkareatypeId());
-      }
-      Process process = processesById.get(rpwat.getProcessId());
-      WorkAreaType workAreaType = workAreaTypeById.get(rpwat.getWorkareatypeId());
-
-      if (!workAreaTypesByProcess.containsKey(process)) {
-        workAreaTypesByProcess.put(process, new HashSet<>());
-      }
-      process.getWorkAreasTypes().add(workAreaType);
-      workAreaTypesByProcess.get(process).add(workAreaType);
-    }
-
-    for (RequestWorkAreaStatic requestWorkAreaStatic : req.getLoadedData().getWorkareasstatic()) {
-      WorkAreaType wat = workAreaTypeById.get(requestWorkAreaStatic.getWorkareatypeId());
-      if (wat.getStaticWorkAreas() == null) {
-        wat.setStaticWorkAreas(new ArrayList<>());
-      }
-      wat.getStaticWorkAreas().add(WorkArea
-          .builder()
-          .type(wat)
-          .x(requestWorkAreaStatic.getX())
-          .y(requestWorkAreaStatic.getY())
-          .build());
-    }
-
-    // Extract which unique work-area-types are used by period
-    for (Period period : periods) {
-      if (!workAreaTypesByPeriodHelper.containsKey(period)) {
-        workAreaTypesByPeriodHelper.put(period, new HashSet<>());
-        workAreaTypesByPeriod.put(period, new ArrayList<>());
-      }
-      List<WorkAreaType> workAreaTypeList = workAreaTypesByPeriod.get(period);
-      Set<WorkAreaType> workAreaTypeSet = workAreaTypesByPeriodHelper.get(period);
-      for (Process process : period.getProcesses()) {
-        for (WorkAreaType workAreasType : process.getWorkAreasTypes()) {
-          if (!workAreaTypeSet.contains(workAreasType)) {
-            workAreaTypeSet.add(workAreasType);
-            workAreaTypeList.add(workAreasType);
-          }
-        }
-      }
-    }
+    buildStructures(req, request, periods, periodsById, requestPeriodsById, workAreaTypesByPeriod,
+        workAreaTypesByPeriodHelper, processesById, requestProcessesById, processes,
+        workAreaTypeById,
+        requestWorkAreaTypeById, workAreaTypesByProcess);
 
     int facilities = 0;
     for (Period period : periods) {
@@ -154,28 +70,7 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       }
     }
 
-    int value = req.getProblem().getMaxX();
-    int bitSizeX = 0;
-    while (value > 0) {
-      bitSizeX++;
-      value = value >> 1;
-    }
-    value = req.getProblem().getMaxY();
-    int bitSizeY = 0;
-    while (value > 0) {
-      bitSizeY++;
-      value = value >> 1;
-    }
-
-    FLP flp = FLP.builder()
-        .bitSizeX(bitSizeX)
-        .bitSizeY(bitSizeY)
-        .facilitiesNumber(facilities)
-        .periods(periods)
-        .workAreaTypeByPeriod(workAreaTypesByPeriod)
-        .maxX(req.getProblem().getMaxX())
-        .maxY(req.getProblem().getMaxY())
-        .build();
+    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities);
 
     GeneticAlgorithmResult[] results = flp.runGenetic(GeneticAlgorithmParameters.builder()
         .generations(req.getGenetic().getGenerations())
@@ -279,6 +174,228 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     }
 
     return response;
+  }
+
+  private void buildStructures(RequestProblem req, RequestLoadedData request, List<Period> periods,
+      Map<Long, Period> periodsById, Map<Long, RequestPeriod> requestPeriodsById,
+      Map<Period, List<WorkAreaType>> workAreaTypesByPeriod,
+      Map<Period, Set<WorkAreaType>> workAreaTypesByPeriodHelper, Map<Long, Process> processesById,
+      Map<Long, RequestProcess> requestProcessesById, List<Process> processes,
+      Map<Long, WorkAreaType> workAreaTypeById,
+      Map<Long, RequestWorkAreaType> requestWorkAreaTypeById,
+      Map<Process, Set<WorkAreaType>> workAreaTypesByProcess) {
+    for (RequestPeriod rp : request.getPeriods()) {
+      requestPeriodsById.put(rp.getId(), rp);
+      Period p = new Period();
+      p.setId(rp.getId());
+      p.setProcesses(new ArrayList<>());
+      periods.add(p);
+      periodsById.put(p.getId(), p);
+    }
+
+    for (RequestProcess rq : request.getProcesses()) {
+      requestProcessesById.put(rq.getId(), rq);
+      Process p = new Process();
+      p.setId(rq.getId());
+      p.setWorkAreasTypes(new ArrayList<>());
+      processes.add(p);
+      processesById.put(p.getId(), p);
+    }
+
+    for (RequestWorkAreaType rwat : request.getWorkareatypes()) {
+      requestWorkAreaTypeById.put(rwat.getId(), rwat);
+      WorkAreaType wat = new WorkAreaType();
+      wat.setId(rwat.getId());
+      wat.setIsStatic(rwat.getIsStatic());
+      wat.setAmount(rwat.getAmount());
+      wat.setH(rwat.getH().doubleValue());
+      wat.setW(rwat.getW().doubleValue());
+      wat.setRc(rwat.getRc().doubleValue());
+      wat.setMhc(rwat.getMhc().doubleValue());
+      workAreaTypeById.put(wat.getId(), wat);
+    }
+
+    for (RequestProcessPeriod rpp : request.getProcessxperiod()) {
+      if (periodsById.get(rpp.getPeriodId()) == null) {
+        log.error("Couldn't find period with id {}", rpp.getPeriodId());
+      }
+      if (processesById.get(rpp.getProcessId()) == null) {
+        log.error("Couldn't find process with id {}", rpp.getProcessId());
+      }
+      periodsById.get(rpp.getPeriodId()).getProcesses().add(processesById.get(rpp.getProcessId()));
+    }
+
+    for (RequestProcessWorkAreaType rpwat : request.getWorkareatypexprocess()) {
+      if (processesById.get(rpwat.getProcessId()) == null) {
+        log.error("Couldn't find process with id {}", rpwat.getProcessId());
+      }
+      if (workAreaTypeById.get(rpwat.getWorkareatypeId()) == null) {
+        log.error("Couldn't find workAreaType with id {}", rpwat.getWorkareatypeId());
+      }
+      Process process = processesById.get(rpwat.getProcessId());
+      WorkAreaType workAreaType = workAreaTypeById.get(rpwat.getWorkareatypeId());
+
+      if (!workAreaTypesByProcess.containsKey(process)) {
+        workAreaTypesByProcess.put(process, new HashSet<>());
+      }
+      process.getWorkAreasTypes().add(workAreaType);
+      workAreaTypesByProcess.get(process).add(workAreaType);
+    }
+
+    for (RequestWorkAreaStatic requestWorkAreaStatic : req.getLoadedData().getWorkareasstatic()) {
+      WorkAreaType wat = workAreaTypeById.get(requestWorkAreaStatic.getWorkareatypeId());
+      if (wat.getStaticWorkAreas() == null) {
+        wat.setStaticWorkAreas(new ArrayList<>());
+      }
+      wat.getStaticWorkAreas().add(WorkArea
+          .builder()
+          .type(wat)
+          .x(requestWorkAreaStatic.getX())
+          .y(requestWorkAreaStatic.getY())
+          .build());
+    }
+
+    // Extract which unique work-area-types are used by period
+    for (Period period : periods) {
+      if (!workAreaTypesByPeriodHelper.containsKey(period)) {
+        workAreaTypesByPeriodHelper.put(period, new HashSet<>());
+        workAreaTypesByPeriod.put(period, new ArrayList<>());
+      }
+      List<WorkAreaType> workAreaTypeList = workAreaTypesByPeriod.get(period);
+      Set<WorkAreaType> workAreaTypeSet = workAreaTypesByPeriodHelper.get(period);
+      for (Process process : period.getProcesses()) {
+        for (WorkAreaType workAreasType : process.getWorkAreasTypes()) {
+          if (!workAreaTypeSet.contains(workAreasType)) {
+            workAreaTypeSet.add(workAreasType);
+            workAreaTypeList.add(workAreasType);
+          }
+        }
+      }
+    }
+  }
+
+  @Override
+  public GreyWolfAlgorithmResult[] runGwTest(RequestProblem req) {
+    RequestLoadedData request = req.getLoadedData();
+    List<Period> periods = new ArrayList<>();
+    Map<Long, Period> periodsById = new HashMap<>();
+    Map<Long, RequestPeriod> requestPeriodsById = new HashMap<>();
+
+    Map<Period, List<WorkAreaType>> workAreaTypesByPeriod = new HashMap<>();
+    Map<Period, Set<WorkAreaType>> workAreaTypesByPeriodHelper = new HashMap<>();
+
+    Map<Long, Process> processesById = new HashMap<>();
+    Map<Long, RequestProcess> requestProcessesById = new HashMap<>();
+    List<Process> processes = new ArrayList<>();
+
+    Map<Long, WorkAreaType> workAreaTypeById = new HashMap<>();
+    Map<Long, RequestWorkAreaType> requestWorkAreaTypeById = new HashMap<>();
+    Map<Process, Set<WorkAreaType>> workAreaTypesByProcess = new HashMap<>();
+
+    buildStructures(req, request, periods, periodsById, requestPeriodsById, workAreaTypesByPeriod,
+        workAreaTypesByPeriodHelper, processesById, requestProcessesById, processes,
+        workAreaTypeById,
+        requestWorkAreaTypeById, workAreaTypesByProcess);
+
+    int facilities = 0;
+    for (Period period : periods) {
+      for (WorkAreaType workAreaType : workAreaTypesByPeriod.get(period)) {
+        if (!workAreaType.getIsStatic()) {
+          facilities += workAreaType.getAmount();
+        }
+      }
+    }
+
+    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities);
+
+    GreyWolfAlgorithmResult[] resultsGW = flp.runGreyWolf(GreyWolfAlgorithmParameters.builder()
+        .iterations(req.getGreyWolf().getIterations())
+        .populationSize(req.getGreyWolf().getPopulation())
+        .dimensions(facilities * 2)
+        .random(new Random(18121997))
+        .build());
+
+    for (GreyWolfAlgorithmResult greyWolfAlgorithmResult : resultsGW) {
+      greyWolfAlgorithmResult.setWolf(null);
+    }
+
+    return resultsGW;
+  }
+
+  @Override
+  public GeneticAlgorithmResult[] runGATest(RequestProblem req) {
+    RequestLoadedData request = req.getLoadedData();
+    List<Period> periods = new ArrayList<>();
+    Map<Long, Period> periodsById = new HashMap<>();
+    Map<Long, RequestPeriod> requestPeriodsById = new HashMap<>();
+
+    Map<Period, List<WorkAreaType>> workAreaTypesByPeriod = new HashMap<>();
+    Map<Period, Set<WorkAreaType>> workAreaTypesByPeriodHelper = new HashMap<>();
+
+    Map<Long, Process> processesById = new HashMap<>();
+    Map<Long, RequestProcess> requestProcessesById = new HashMap<>();
+    List<Process> processes = new ArrayList<>();
+
+    Map<Long, WorkAreaType> workAreaTypeById = new HashMap<>();
+    Map<Long, RequestWorkAreaType> requestWorkAreaTypeById = new HashMap<>();
+    Map<Process, Set<WorkAreaType>> workAreaTypesByProcess = new HashMap<>();
+
+    buildStructures(req, request, periods, periodsById, requestPeriodsById, workAreaTypesByPeriod,
+        workAreaTypesByPeriodHelper, processesById, requestProcessesById, processes,
+        workAreaTypeById,
+        requestWorkAreaTypeById, workAreaTypesByProcess);
+
+    int facilities = 0;
+    for (Period period : periods) {
+      for (WorkAreaType workAreaType : workAreaTypesByPeriod.get(period)) {
+        if (!workAreaType.getIsStatic()) {
+          facilities += workAreaType.getAmount();
+        }
+      }
+    }
+
+    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities);
+
+    GeneticAlgorithmResult[] results = flp.runGenetic(GeneticAlgorithmParameters.builder()
+        .generations(req.getGenetic().getGenerations())
+        .random(new Random(18121997))
+        .populationSize(req.getGenetic().getPopulation())
+        .ratioMutation(req.getGenetic().getRatioMutation())
+        .ratioRecombination(req.getGenetic().getRatioCrossover())
+        .ratioSurvive(req.getGenetic().getRatioSurvive())
+        .build());
+
+    for (GeneticAlgorithmResult result : results) {
+      result.setChromosome(null);
+    }
+
+    return results;
+  }
+
+  private FLP getFlp(RequestProblem req, List<Period> periods,
+      Map<Period, List<WorkAreaType>> workAreaTypesByPeriod, int facilities) {
+    int value = req.getProblem().getMaxX();
+    int bitSizeX = 0;
+    while (value > 0) {
+      bitSizeX++;
+      value = value >> 1;
+    }
+    value = req.getProblem().getMaxY();
+    int bitSizeY = 0;
+    while (value > 0) {
+      bitSizeY++;
+      value = value >> 1;
+    }
+
+    return FLP.builder()
+        .bitSizeX(bitSizeX)
+        .bitSizeY(bitSizeY)
+        .facilitiesNumber(facilities)
+        .periods(periods)
+        .workAreaTypeByPeriod(workAreaTypesByPeriod)
+        .maxX(req.getProblem().getMaxX())
+        .maxY(req.getProblem().getMaxY())
+        .build();
   }
 
 }

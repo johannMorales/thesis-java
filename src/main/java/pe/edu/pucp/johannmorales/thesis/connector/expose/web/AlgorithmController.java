@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import pe.edu.pucp.johannmorales.thesis.algorithm.genetic.model.GeneticAlgorithmResult;
+import pe.edu.pucp.johannmorales.thesis.algorithm.greywolf.model.GreyWolfAlgorithmResult;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProblem;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.response.Response;
 import pe.edu.pucp.johannmorales.thesis.connector.service.AlgorithmService;
@@ -26,9 +28,17 @@ public class AlgorithmController {
     return algorithmService.run(request);
   }
 
-  @PostMapping("greywolf")
-  public void runGreyWolf() {
+  @PostMapping("greywolf-test")
+  @CrossOrigin(origins = "*", allowedHeaders = "*")
+  public GreyWolfAlgorithmResult[] greyWolfTest(@RequestBody RequestProblem request) {
+    return algorithmService.runGwTest(request);
+  }
 
+
+  @PostMapping("genetic-test")
+  @CrossOrigin(origins = "*", allowedHeaders = "*")
+  public GeneticAlgorithmResult[] geneticTest(@RequestBody RequestProblem request) {
+    return algorithmService.runGATest(request);
   }
 
 }
