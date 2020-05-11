@@ -163,6 +163,8 @@ public final class FLP {
     } else {
       if (!isValidSolution(list)) {
         return Double.MAX_VALUE;
+      } else {
+        return fitness > 0 ? mhc * rc * fitness : rc * mhc;
       }
     }
   }
