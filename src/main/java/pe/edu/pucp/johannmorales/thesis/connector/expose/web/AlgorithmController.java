@@ -21,7 +21,8 @@ public class AlgorithmController {
   @PostMapping("genetic")
   @CrossOrigin(origins = "*", allowedHeaders = "*")
   public Response runGenetic(@RequestBody RequestProblem request) {
-    log.info("{}", request);
+    log.info("{}", request.getGenetic());
+    log.info("{}", request.getGreyWolf());
     return algorithmService.run(request);
   }
 

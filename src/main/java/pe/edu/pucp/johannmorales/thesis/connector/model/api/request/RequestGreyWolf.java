@@ -7,10 +7,9 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-public class RequestWorkAreaStatic {
+public class RequestGreyWolf {
 
-  private Long workareatypeId;
-  private Double x;
-  private Double y;
+  private Integer population;
+  private Integer iterations;
 
 }

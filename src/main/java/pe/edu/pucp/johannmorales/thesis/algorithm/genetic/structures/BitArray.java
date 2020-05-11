@@ -1,7 +1,6 @@
 package pe.edu.pucp.johannmorales.thesis.algorithm.genetic.structures;
 
 import java.util.Arrays;
-import java.util.Random;
 import org.apache.commons.lang3.StringUtils;
 
 public class BitArray {
@@ -21,19 +20,6 @@ public class BitArray {
       }
     }
     bitArray.size = value.length();
-    return bitArray;
-  }
-
-  public static BitArray createRandom(Integer size, Random randomProvider) {
-    BitArray bitArray = new BitArray();
-    bitArray.blocks = new Long[size / BLOCK_BIT_SIZE + (size % BLOCK_BIT_SIZE == 0 ? 0 : 1)];
-    Arrays.fill(bitArray.blocks, 0L);
-    for (int i = 0; i < size; i++) {
-      if (randomProvider.nextDouble() >= 0.5) {
-        bitArray.setInPlace(i);
-      }
-    }
-    bitArray.size = size;
     return bitArray;
   }
 

@@ -7,17 +7,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 import pe.edu.pucp.johannmorales.thesis.algorithm.genetic.GeneticAlgorithmParameters;
 import pe.edu.pucp.johannmorales.thesis.algorithm.genetic.model.GeneticAlgorithmResult;
+import pe.edu.pucp.johannmorales.thesis.algorithm.greywolf.GreyWolfAlgorithmParameters;
+import pe.edu.pucp.johannmorales.thesis.algorithm.greywolf.model.GreyWolfAlgorithmResult;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestLoadedData;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestPeriod;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProblem;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProcess;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProcessPeriod;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProcessWorkAreaType;
+import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestWorkAreaStatic;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestWorkAreaType;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.response.Response;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.response.ResponsePeriod;
@@ -27,6 +31,7 @@ import pe.edu.pucp.johannmorales.thesis.connector.model.api.response.ResponseWor
 import pe.edu.pucp.johannmorales.thesis.flp.FLP;
 import pe.edu.pucp.johannmorales.thesis.flp.model.Period;
 import pe.edu.pucp.johannmorales.thesis.flp.model.Process;
+import pe.edu.pucp.johannmorales.thesis.flp.model.WorkArea;
 import pe.edu.pucp.johannmorales.thesis.flp.model.WorkAreaType;
 
 @Log4j2
@@ -36,7 +41,6 @@ public class AlgorithmServiceImpl implements AlgorithmService {
   @Override
   public Response run(RequestProblem req) {
     RequestLoadedData request = req.getLoadedData();
-
     List<Period> periods = new ArrayList<>();
     Map<Long, Period> periodsById = new HashMap<>();
     Map<Long, RequestPeriod> requestPeriodsById = new HashMap<>();
@@ -76,6 +80,10 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       wat.setId(rwat.getId());
       wat.setIsStatic(rwat.getIsStatic());
       wat.setAmount(rwat.getAmount());
+      wat.setH(rwat.getH().doubleValue());
+      wat.setW(rwat.getW().doubleValue());
+      wat.setRc(rwat.getRc().doubleValue());
+      wat.setMhc(rwat.getMhc().doubleValue());
       workAreaTypeById.put(wat.getId(), wat);
     }
 
@@ -106,6 +114,19 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       workAreaTypesByProcess.get(process).add(workAreaType);
     }
 
+    for (RequestWorkAreaStatic requestWorkAreaStatic : req.getLoadedData().getWorkareasstatic()) {
+      WorkAreaType wat = workAreaTypeById.get(requestWorkAreaStatic.getWorkareatypeId());
+      if (wat.getStaticWorkAreas() == null) {
+        wat.setStaticWorkAreas(new ArrayList<>());
+      }
+      wat.getStaticWorkAreas().add(WorkArea
+          .builder()
+          .type(wat)
+          .x(requestWorkAreaStatic.getX())
+          .y(requestWorkAreaStatic.getY())
+          .build());
+    }
+
     // Extract which unique work-area-types are used by period
     for (Period period : periods) {
       if (!workAreaTypesByPeriodHelper.containsKey(period)) {
@@ -127,16 +148,33 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     int facilities = 0;
     for (Period period : periods) {
       for (WorkAreaType workAreaType : workAreaTypesByPeriod.get(period)) {
-        facilities += workAreaType.getAmount();
+        if (!workAreaType.getIsStatic()) {
+          facilities += workAreaType.getAmount();
+        }
       }
     }
 
+    int value = req.getProblem().getMaxX();
+    int bitSizeX = 0;
+    while (value > 0) {
+      bitSizeX++;
+      value = value >> 1;
+    }
+    value = req.getProblem().getMaxY();
+    int bitSizeY = 0;
+    while (value > 0) {
+      bitSizeY++;
+      value = value >> 1;
+    }
+
     FLP flp = FLP.builder()
-        .bitSizeX(8)
-        .bitSizeY(8)
+        .bitSizeX(bitSizeX)
+        .bitSizeY(bitSizeY)
         .facilitiesNumber(facilities)
-        .maxX(100)
-        .maxY(100)
+        .periods(periods)
+        .workAreaTypeByPeriod(workAreaTypesByPeriod)
+        .maxX(req.getProblem().getMaxX())
+        .maxY(req.getProblem().getMaxY())
         .build();
 
     GeneticAlgorithmResult[] results = flp.runGenetic(GeneticAlgorithmParameters.builder()
@@ -149,9 +187,21 @@ public class AlgorithmServiceImpl implements AlgorithmService {
         .build());
 
     GeneticAlgorithmResult result = results[results.length - 1];
+    log.info("GA {}", result);
 
-    System.out.println(result);
-    List<Pair<Double, Double>> resultCoordinates = flp.decodeBitArray(result.getChromosome());
+    GreyWolfAlgorithmResult[] resultsGW = flp.runGreyWolf(GreyWolfAlgorithmParameters.builder()
+        .iterations(req.getGreyWolf().getIterations())
+        .populationSize(req.getGreyWolf().getPopulation())
+        .dimensions(facilities * 2)
+        .random(new Random(18121997))
+        .build());
+
+    GreyWolfAlgorithmResult resultGW = resultsGW[resultsGW.length - 1];
+
+    log.info("GW {}", resultGW);
+
+    List<Pair<Double, Double>> gaResultCoordinates = flp.decodeBitArray(result.getChromosome());
+    List<Pair<Double, Double>> gwResultCoordinates = flp.decodeVector(resultGW.getWolf());
 
     Response response = new Response();
     response.setPeriods(new ArrayList<>());
@@ -177,16 +227,36 @@ public class AlgorithmServiceImpl implements AlgorithmService {
           responseWorkAreaType.setW(rwat.getW());
           responseWorkAreaType.setName(rwat.getName());
           responseWorkAreaType.setId(rwat.getId());
-          responseWorkAreaType.setSolutionGenetic(new ArrayList<>());
+
           rp.getWorkAreaTypes().add(responseWorkAreaType);
           responseWorkAreaTypeMap.put(rwat.getId(), responseWorkAreaType);
-          for (int i = 0; i < rwat.getAmount(); i++) {
-            Pair<Double, Double> pair = resultCoordinates.get(pairCounter++);
-            ResponseWorkArea rwa = new ResponseWorkArea();
-            rwa.setX(pair.getLeft());
-            rwa.setY(pair.getRight());
-            responseWorkAreaType.getSolutionGenetic().add(rwa);
+
+          if (workAreaType.getIsStatic()) {
+            List<ResponseWorkArea> rwa = workAreaType.getStaticWorkAreas()
+                .stream()
+                .map(i -> ResponseWorkArea.builder().x(i.getX()).y(i.getY()).build())
+                .collect(Collectors.toList());
+            responseWorkAreaType.setSolutionGenetic(rwa);
+            responseWorkAreaType.setSolutionGreyWolf(rwa);
+          } else {
+            responseWorkAreaType.setSolutionGenetic(new ArrayList<>());
+            responseWorkAreaType.setSolutionGreyWolf(new ArrayList<>());
+            for (int i = 0; i < rwat.getAmount(); i++) {
+              Pair<Double, Double> pair = gaResultCoordinates.get(pairCounter);
+              ResponseWorkArea rwa = new ResponseWorkArea();
+              rwa.setX(pair.getLeft());
+              rwa.setY(pair.getRight());
+              responseWorkAreaType.getSolutionGenetic().add(rwa);
+
+              Pair<Double, Double> pair2 = gwResultCoordinates.get(pairCounter++);
+              ResponseWorkArea rwa2 = new ResponseWorkArea();
+              rwa2.setX(pair2.getLeft());
+              rwa2.setY(pair2.getRight());
+              responseWorkAreaType.getSolutionGreyWolf().add(rwa2);
+            }
           }
+
+
         }
       }
 

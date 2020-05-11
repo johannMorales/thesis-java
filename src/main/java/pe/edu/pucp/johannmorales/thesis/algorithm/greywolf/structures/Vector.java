@@ -1,6 +1,5 @@
 package pe.edu.pucp.johannmorales.thesis.algorithm.greywolf.structures;
 
-import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Random;
 import lombok.Getter;
@@ -9,15 +8,15 @@ import org.apache.commons.lang3.StringUtils;
 
 public class Vector {
 
-  private static int DECIMALS = 2;
+  private static int DECIMALS = 10;
 
   @Getter
   private Integer dimension;
   private Boolean isConstant;
-  private BigDecimal constantValue;
-  private BigDecimal[] components;
+  private Double constantValue;
+  private Double[] components;
 
-  public static Vector createConstant(Integer dimensions, BigDecimal value) {
+  public static Vector createConstant(Integer dimensions, Double value) {
     Vector vector = new Vector();
     vector.dimension = dimensions;
     vector.isConstant = true;
@@ -30,8 +29,8 @@ public class Vector {
     vector.dimension = dimensions;
     vector.isConstant = false;
     vector.constantValue = null;
-    vector.components = new BigDecimal[dimensions];
-    Arrays.fill(vector.components, BigDecimal.ZERO.setScale(DECIMALS, BigDecimal.ROUND_HALF_UP));
+    vector.components = new Double[dimensions];
+    Arrays.fill(vector.components, 0.0);
     return vector;
   }
 
@@ -40,15 +39,13 @@ public class Vector {
     vector.dimension = dimension;
     vector.isConstant = false;
     vector.constantValue = null;
-    vector.components = new BigDecimal[dimension];
-    for (int i = 0; i < vector.components.length; i++) {
-      vector.components[i] = BigDecimal.valueOf(random.nextDouble())
-          .setScale(DECIMALS, BigDecimal.ROUND_HALF_UP);
-    }
+    vector.components = new Double[dimension];
+    Double value = random.nextDouble();
+    Arrays.fill(vector.components, value);
     return vector;
   }
 
-  public void set(Integer dimension, BigDecimal value) {
+  public void set(Integer dimension, Double value) {
     if (dimension >= this.dimension || dimension < 0) {
       throw new IndexOutOfBoundsException();
     }
@@ -56,7 +53,7 @@ public class Vector {
     this.components[dimension] = value;
   }
 
-  public BigDecimal get(Integer dimension) {
+  public Double get(Integer dimension) {
     if (dimension >= this.dimension || dimension < 0) {
       throw new IndexOutOfBoundsException();
     }
@@ -69,13 +66,13 @@ public class Vector {
 
   public Vector dotProduct(Vector other) {
     if (this.isConstant && other.isConstant) {
-      return Vector.createConstant(dimension, this.constantValue.multiply(other.constantValue));
+      return Vector.createConstant(dimension, this.constantValue * (other.constantValue));
     } else {
       Vector result = Vector.create(dimension);
       result.isConstant = false;
       result.constantValue = null;
       for (Integer i = 0; i < dimension; i++) {
-        result.set(i, this.get(i).multiply(other.get(i)));
+        result.set(i, this.get(i) * other.get(i));
       }
       return result;
     }
@@ -83,11 +80,11 @@ public class Vector {
 
   public Vector abs() {
     if (this.isConstant) {
-      return Vector.createConstant(dimension, this.constantValue.abs());
+      return Vector.createConstant(dimension, Math.abs(this.constantValue));
     } else {
       Vector result = Vector.create(dimension);
       for (Integer i = 0; i < dimension; i++) {
-        result.set(i, this.get(i).abs());
+        result.set(i, Math.abs(this.get(i)));
       }
       return result;
     }
@@ -103,14 +100,14 @@ public class Vector {
     int size = vectors[0].getDimension();
     Vector result = new Vector();
     result.isConstant = false;
-    result.components = new BigDecimal[size];
+    result.components = new Double[size];
     result.constantValue = null;
     result.dimension = size;
 
     for (int i = 0; i < size; i++) {
-      BigDecimal sum = BigDecimal.ZERO;
+      Double sum = 0.0;
       for (int j = 0; j < vectors.length; j++) {
-        sum = sum.add(vectors[j].components[i]);
+        sum = sum + (vectors[j].components[i]);
       }
       result.components[i] = sum;
     }
@@ -120,7 +117,7 @@ public class Vector {
   public Vector divideInPlace(Integer divide) {
     for (int i = 0; i < this.components.length; i++) {
       components[i] = components[i]
-          .divide(BigDecimal.valueOf(divide), DECIMALS, BigDecimal.ROUND_HALF_UP);
+          / (Double.valueOf(divide));
     }
     return this;
   }
@@ -137,7 +134,7 @@ public class Vector {
     } else {
       for (int i = 0; i < this.dimension; i++) {
         components[i] = components[i]
-            .subtract(other.isConstant ? other.constantValue : other.components[i]);
+            - (other.isConstant ? other.constantValue : other.components[i]);
       }
     }
   }
@@ -155,7 +152,7 @@ public class Vector {
       Vector v = new Vector();
       v.dimension = dimension;
       v.isConstant = false;
-      v.components = new BigDecimal[dimension];
+      v.components = new Double[dimension];
       System.arraycopy(components, 0, v.components, 0, v.components.length);
       return v;
     }
@@ -163,10 +160,10 @@ public class Vector {
 
   public void multiplyInPlace(int i) {
     if (isConstant) {
-      constantValue = constantValue.multiply(BigDecimal.valueOf(i));
+      constantValue = constantValue * ((double) i);
     } else {
       for (int integer = 0; integer < dimension; integer++) {
-        components[i] = components[i].multiply(BigDecimal.valueOf(i));
+        components[i] = components[i] * ((double) i);
       }
     }
   }

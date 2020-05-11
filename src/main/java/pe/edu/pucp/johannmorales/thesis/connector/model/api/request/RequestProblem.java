@@ -11,6 +11,10 @@ public class RequestProblem {
 
   private RequestGenetic genetic;
 
+  private RequestProblemParameters problem;
+
+  private RequestGreyWolf greyWolf;
+
   private RequestLoadedData loadedData;
 
 }

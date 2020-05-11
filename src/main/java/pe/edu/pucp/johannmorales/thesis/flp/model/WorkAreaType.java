@@ -1,5 +1,6 @@
 package pe.edu.pucp.johannmorales.thesis.flp.model;
 
+import java.util.List;
 import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,11 @@ public class WorkAreaType {
   private Long id;
   private Boolean isStatic;
   private Integer amount;
+  private Double w;
+  private Double h;
+  private Double mhc;
+  private Double rc;
+  private List<WorkArea> staticWorkAreas;
 
   @Override
   public boolean equals(Object o) {
