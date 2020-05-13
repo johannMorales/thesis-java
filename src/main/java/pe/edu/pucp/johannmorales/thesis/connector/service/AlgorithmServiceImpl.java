@@ -312,7 +312,7 @@ public class AlgorithmServiceImpl implements AlgorithmService {
         .iterations(req.getGreyWolf().getIterations())
         .populationSize(req.getGreyWolf().getPopulation())
         .dimensions(facilities * 2)
-        .random(new Random(18121997))
+        .random(new Random())
         .build());
 
     for (GreyWolfAlgorithmResult greyWolfAlgorithmResult : resultsGW) {
@@ -358,7 +358,7 @@ public class AlgorithmServiceImpl implements AlgorithmService {
 
     GeneticAlgorithmResult[] results = flp.runGenetic(GeneticAlgorithmParameters.builder()
         .generations(req.getGenetic().getGenerations())
-        .random(new Random(18121997))
+        .random(new Random())
         .populationSize(req.getGenetic().getPopulation())
         .ratioMutation(req.getGenetic().getRatioMutation())
         .ratioRecombination(req.getGenetic().getRatioCrossover())

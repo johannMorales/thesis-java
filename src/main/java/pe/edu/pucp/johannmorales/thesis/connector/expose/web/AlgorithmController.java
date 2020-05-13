@@ -21,7 +21,6 @@ public class AlgorithmController {
   private AlgorithmService algorithmService;
 
   @PostMapping("genetic")
-  @CrossOrigin(origins = "*", allowedHeaders = "*")
   public Response runGenetic(@RequestBody RequestProblem request) {
     log.info("{}", request.getGenetic());
     log.info("{}", request.getGreyWolf());
@@ -29,15 +28,15 @@ public class AlgorithmController {
   }
 
   @PostMapping("greywolf-test")
-  @CrossOrigin(origins = "*", allowedHeaders = "*")
   public GreyWolfAlgorithmResult[] greyWolfTest(@RequestBody RequestProblem request) {
+    log.info("{}", request.getGreyWolf());
     return algorithmService.runGwTest(request);
   }
 
 
   @PostMapping("genetic-test")
-  @CrossOrigin(origins = "*", allowedHeaders = "*")
   public GeneticAlgorithmResult[] geneticTest(@RequestBody RequestProblem request) {
+    log.info("{}", request.getGenetic());
     return algorithmService.runGATest(request);
   }
 
