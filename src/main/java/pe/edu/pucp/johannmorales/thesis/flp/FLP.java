@@ -160,8 +160,62 @@ public final class FLP {
     double mhc = calculateMaterialHandlingCost(map);
     double rc = calculateRelocationCost(map);
 
-    if (checkhardrestrictions && !isValidSolutionWithStructure(map)) {
-      return Double.MAX_VALUE;
+    if (checkhardrestrictions) {
+      int overlapBroke = 1;
+      int minBroke = 1;
+      int maxBroke = 1;
+
+      ///START
+
+      for (Entry<Period, Map<WorkAreaType, List<WorkArea>>> periodMapEntry : map.entrySet()) {
+        Map<WorkAreaType, List<WorkArea>> workAreasByPeriod = periodMapEntry.getValue();
+
+        for (Entry<WorkAreaType, List<WorkArea>> entry1 : workAreasByPeriod.entrySet()) {
+          WorkAreaType watA = entry1.getKey();
+          for (Entry<WorkAreaType, List<WorkArea>> entry2 : workAreasByPeriod.entrySet()) {
+            WorkAreaType watB = entry2.getKey();
+            if (minDistanceMap.containsKey(watA) && minDistanceMap.get(watA).containsKey(watB)) {
+              for (WorkArea waA : entry1.getValue()) {
+                for (WorkArea waB : entry2.getValue()) {
+                  if (waA != waB) {
+                    double d = calculateCentroidDistance(waA, waB);
+                    if (d < minDistanceMap.get(watA).get(watB)) {
+                      minBroke++;
+                    }
+
+                  }
+                }
+              }
+            }
+            if (maxDistanceMap.containsKey(watA) && maxDistanceMap.get(watA).containsKey(watB)) {
+              for (WorkArea waA : entry1.getValue()) {
+                for (WorkArea waB : entry2.getValue()) {
+                  if (waA != waB) {
+                    double d = calculateCentroidDistance(waA, waB);
+                    if (d > maxDistanceMap.get(watA).get(watB)) {
+                      maxBroke++;
+                    }
+
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      for (Entry<Period, Map<WorkAreaType, List<WorkArea>>> periodMapEntry : map.entrySet()) {
+        List<WorkArea> workAreas = new ArrayList<>();
+        for (List<WorkArea> ignored : periodMapEntry.getValue().values()) {
+          workAreas.addAll(ignored);
+        }
+        if (findIfOverlap(workAreas)) {
+          overlapBroke++;
+        }
+      }
+
+      //ENDT
+      return mhc * rc * overlapBroke * minBroke * maxBroke;
     } else {
       return mhc * rc;
     }
