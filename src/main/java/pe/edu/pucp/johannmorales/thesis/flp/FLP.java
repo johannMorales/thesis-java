@@ -179,7 +179,7 @@ public final class FLP {
                 if (waA != waB) {
                   double d = calculateCentroidDistance(waA, waB);
                   if (d < minDistanceMap.get(watA).get(watB)) {
-                    minBroke++;
+                    minBroke += mhc * (maxX + maxY);
                   }
 
                 }
@@ -192,7 +192,7 @@ public final class FLP {
                 if (waA != waB) {
                   double d = calculateCentroidDistance(waA, waB);
                   if (d > maxDistanceMap.get(watA).get(watB)) {
-                    maxBroke++;
+                    maxBroke += mhc * (maxX + maxY);
                   }
 
                 }
@@ -209,7 +209,7 @@ public final class FLP {
         workAreas.addAll(ignored);
       }
       if (findIfOverlap(workAreas)) {
-        overlapBroke++;
+        overlapBroke += mhc * (maxX + maxY);
       }
     }
 
