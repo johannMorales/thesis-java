@@ -303,6 +303,20 @@ public class AlgorithmServiceImpl implements AlgorithmService {
         minDistanceMap.get(watA).put(watB, restriction.getDistance());
       }
 
+    }
+
+    for (RequestRestriction restriction : req.getLoadedData().getRestrictionsMax()) {
+      WorkAreaType watA = workAreaTypeById.get(restriction.getWorkareatypeIdA());
+      WorkAreaType watB = workAreaTypeById.get(restriction.getWorkareatypeIdB());
+
+      if (!maxDistanceMap.containsKey(watA)) {
+        maxDistanceMap.put(watA, new HashMap<>());
+      }
+
+      if (!maxDistanceMap.containsKey(watB)) {
+        maxDistanceMap.put(watB, new HashMap<>());
+      }
+
       if (maxDistanceMap.get(watA).containsKey(watB)) {
         if (maxDistanceMap.get(watA).get(watB) > restriction.getDistance()) {
           maxDistanceMap.get(watA).put(watB, restriction.getDistance());
@@ -310,7 +324,10 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       } else {
         maxDistanceMap.get(watA).put(watB, restriction.getDistance());
       }
+
     }
+
+
   }
 
   @Override
