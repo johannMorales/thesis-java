@@ -117,7 +117,7 @@ public class GreyWolfAlg {
     while (iter < maxiter) {
       double a = 2.0 - ((double) iter * (2.0 / (double) maxiter));
 
-      for (int i = 0; i < N; i++) {
+      for (int i = 3; i < N; i++) {
         double[] X1 = new double[D];
         double[] X2 = new double[D];
         double[] X3 = new double[D];
