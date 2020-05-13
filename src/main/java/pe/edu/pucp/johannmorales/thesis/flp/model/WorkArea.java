@@ -17,11 +17,11 @@ public class WorkArea {
   private Double y;
   private WorkAreaType type;
 
-  public Double getCenterX() {
+  public Double cX() {
     return x + type.getW() / 2;
   }
 
-  public Double getCenterY() {
+  public Double cY() {
     return y + type.getH() / 2;
   }
 

@@ -39,6 +39,8 @@ public final class FLP {
   private Integer bitSizeY;
   private List<Period> periods;
   private Map<Period, List<WorkAreaType>> workAreaTypeByPeriod;
+  private Map<WorkAreaType, Map<WorkAreaType, Double>> minDistanceMap;
+  private Map<WorkAreaType, Map<WorkAreaType, Double>> maxDistanceMap;
 
   public GreyWolfAlgorithmResult[] runGreyWolf(GreyWolfAlgorithmParameters parameters) {
     double[] lower = new double[facilitiesNumber * 2];
@@ -219,12 +221,11 @@ public final class FLP {
         for (int j = i + 1; j < periods.size(); j++) {
           Period period2 = periods.get(j);
           if (workAreaTypeByPeriod.get(period2).contains(wat)) {
-            int amount = wat.getAmount();
-            for (Integer n = 0; n < wat.getAmount(); n++) {
+            for (int n = 0; n < wat.getAmount(); n++) {
               WorkArea waA = map.get(period1).get(wat).get(n);
               WorkArea waB = map.get(period2).get(wat).get(n);
-              double d = Math.abs(waA.getCenterX() - waB.getCenterX()) + Math
-                  .abs(waA.getCenterY() + waB.getCenterY());
+              double d = Math.abs(waA.cX() - waB.cX()) + Math
+                  .abs(waA.cY() + waB.cY());
               rc += d * wat.getRc();
             }
           }
@@ -244,8 +245,8 @@ public final class FLP {
             WorkAreaType wat2 = process.getWorkAreasTypes().get(i1);
             for (WorkArea waA : map.get(period).get(wat1)) {
               for (WorkArea waB : map.get(period).get(wat2)) {
-                double d = Math.abs(waA.getCenterX() - waB.getCenterX()) + Math
-                    .abs(waA.getCenterY() + waB.getCenterY());
+                double d = Math.abs(waA.cX() - waB.cX()) + Math
+                    .abs(waA.cY() + waB.cY());
                 mhc += d * waA.getType().getMhc();
               }
             }
@@ -285,6 +286,43 @@ public final class FLP {
 
   private boolean isValidSolutionWithStructure(Map<Period, Map<WorkAreaType, List<WorkArea>>> map) {
     for (Entry<Period, Map<WorkAreaType, List<WorkArea>>> periodMapEntry : map.entrySet()) {
+      Map<WorkAreaType, List<WorkArea>> workAreasByPeriod = periodMapEntry.getValue();
+
+      for (Entry<WorkAreaType, List<WorkArea>> entry1 : workAreasByPeriod.entrySet()) {
+        WorkAreaType watA = entry1.getKey();
+        for (Entry<WorkAreaType, List<WorkArea>> entry2 : workAreasByPeriod.entrySet()) {
+          WorkAreaType watB = entry2.getKey();
+          if (minDistanceMap.containsKey(watA) && minDistanceMap.get(watA).containsKey(watB)) {
+            for (WorkArea waA : entry1.getValue()) {
+              for (WorkArea waB : entry2.getValue()) {
+                if (waA != waB) {
+                  double d = calculateCentroidDistance(waA, waB);
+                  if (d < minDistanceMap.get(watA).get(watB)) {
+                    return false;
+                  }
+
+                }
+              }
+            }
+          }
+          if (maxDistanceMap.containsKey(watA) && maxDistanceMap.get(watA).containsKey(watB)) {
+            for (WorkArea waA : entry1.getValue()) {
+              for (WorkArea waB : entry2.getValue()) {
+                if (waA != waB) {
+                  double d = calculateCentroidDistance(waA, waB);
+                  if (d > maxDistanceMap.get(watA).get(watB)) {
+                    return false;
+                  }
+
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (Entry<Period, Map<WorkAreaType, List<WorkArea>>> periodMapEntry : map.entrySet()) {
       List<WorkArea> workAreas = new ArrayList<>();
       for (List<WorkArea> ignored : periodMapEntry.getValue().values()) {
         workAreas.addAll(ignored);
@@ -294,5 +332,9 @@ public final class FLP {
       }
     }
     return true;
+  }
+
+  private double calculateCentroidDistance(WorkArea waA, WorkArea waB) {
+    return Math.sqrt(Math.pow(waA.cX() - waB.cX(), 2.0) + Math.pow(waA.cY() - waB.cY(), 2.0));
   }
 }

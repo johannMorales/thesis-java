@@ -21,6 +21,7 @@ import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProbl
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProcess;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProcessPeriod;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestProcessWorkAreaType;
+import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestRestriction;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestWorkAreaStatic;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.request.RequestWorkAreaType;
 import pe.edu.pucp.johannmorales.thesis.connector.model.api.response.Response;
@@ -56,10 +57,16 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     Map<Long, RequestWorkAreaType> requestWorkAreaTypeById = new HashMap<>();
     Map<Process, Set<WorkAreaType>> workAreaTypesByProcess = new HashMap<>();
 
+    Map<WorkAreaType, Map<WorkAreaType, Double>> minDistanceMap = new HashMap<>();
+    Map<WorkAreaType, Map<WorkAreaType, Double>> maxDistanceMap = new HashMap<>();
+
     buildStructures(req, request, periods, periodsById, requestPeriodsById, workAreaTypesByPeriod,
         workAreaTypesByPeriodHelper, processesById, requestProcessesById, processes,
         workAreaTypeById,
-        requestWorkAreaTypeById, workAreaTypesByProcess);
+        requestWorkAreaTypeById,
+        workAreaTypesByProcess,
+        minDistanceMap,
+        maxDistanceMap);
 
     int facilities = 0;
     for (Period period : periods) {
@@ -70,11 +77,12 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       }
     }
 
-    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities);
+    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities, minDistanceMap,
+        maxDistanceMap);
 
     GeneticAlgorithmResult[] results = flp.runGenetic(GeneticAlgorithmParameters.builder()
         .generations(req.getGenetic().getGenerations())
-        .random(new Random(18121997))
+        .random(new Random())
         .populationSize(req.getGenetic().getPopulation())
         .ratioMutation(req.getGenetic().getRatioMutation())
         .ratioRecombination(req.getGenetic().getRatioCrossover())
@@ -88,7 +96,7 @@ public class AlgorithmServiceImpl implements AlgorithmService {
         .iterations(req.getGreyWolf().getIterations())
         .populationSize(req.getGreyWolf().getPopulation())
         .dimensions(facilities * 2)
-        .random(new Random(18121997))
+        .random(new Random())
         .build());
 
     GreyWolfAlgorithmResult resultGW = resultsGW[resultsGW.length - 1];
@@ -183,7 +191,9 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       Map<Long, RequestProcess> requestProcessesById, List<Process> processes,
       Map<Long, WorkAreaType> workAreaTypeById,
       Map<Long, RequestWorkAreaType> requestWorkAreaTypeById,
-      Map<Process, Set<WorkAreaType>> workAreaTypesByProcess) {
+      Map<Process, Set<WorkAreaType>> workAreaTypesByProcess,
+      Map<WorkAreaType, Map<WorkAreaType, Double>> minDistanceMap,
+      Map<WorkAreaType, Map<WorkAreaType, Double>> maxDistanceMap) {
     for (RequestPeriod rp : request.getPeriods()) {
       requestPeriodsById.put(rp.getId(), rp);
       Period p = new Period();
@@ -272,6 +282,35 @@ public class AlgorithmServiceImpl implements AlgorithmService {
         }
       }
     }
+
+    for (RequestRestriction restriction : req.getLoadedData().getRestrictionsMin()) {
+      WorkAreaType watA = workAreaTypeById.get(restriction.getWorkareatypeIdA());
+      WorkAreaType watB = workAreaTypeById.get(restriction.getWorkareatypeIdB());
+
+      if (!minDistanceMap.containsKey(watA)) {
+        minDistanceMap.put(watA, new HashMap<>());
+      }
+
+      if (!minDistanceMap.containsKey(watB)) {
+        minDistanceMap.put(watB, new HashMap<>());
+      }
+
+      if (minDistanceMap.get(watA).containsKey(watB)) {
+        if (minDistanceMap.get(watA).get(watB) < restriction.getDistance()) {
+          minDistanceMap.get(watA).put(watB, restriction.getDistance());
+        }
+      } else {
+        minDistanceMap.get(watA).put(watB, restriction.getDistance());
+      }
+
+      if (maxDistanceMap.get(watA).containsKey(watB)) {
+        if (maxDistanceMap.get(watA).get(watB) > restriction.getDistance()) {
+          maxDistanceMap.get(watA).put(watB, restriction.getDistance());
+        }
+      } else {
+        maxDistanceMap.get(watA).put(watB, restriction.getDistance());
+      }
+    }
   }
 
   @Override
@@ -292,10 +331,13 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     Map<Long, RequestWorkAreaType> requestWorkAreaTypeById = new HashMap<>();
     Map<Process, Set<WorkAreaType>> workAreaTypesByProcess = new HashMap<>();
 
+    Map<WorkAreaType, Map<WorkAreaType, Double>> minDistanceMap = new HashMap<>();
+    Map<WorkAreaType, Map<WorkAreaType, Double>> maxDistanceMap = new HashMap<>();
+
     buildStructures(req, request, periods, periodsById, requestPeriodsById, workAreaTypesByPeriod,
         workAreaTypesByPeriodHelper, processesById, requestProcessesById, processes,
         workAreaTypeById,
-        requestWorkAreaTypeById, workAreaTypesByProcess);
+        requestWorkAreaTypeById, workAreaTypesByProcess, minDistanceMap, maxDistanceMap);
 
     int facilities = 0;
     for (Period period : periods) {
@@ -306,7 +348,8 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       }
     }
 
-    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities);
+    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities, minDistanceMap,
+        maxDistanceMap);
 
     GreyWolfAlgorithmResult[] resultsGW = flp.runGreyWolf(GreyWolfAlgorithmParameters.builder()
         .iterations(req.getGreyWolf().getIterations())
@@ -340,10 +383,13 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     Map<Long, RequestWorkAreaType> requestWorkAreaTypeById = new HashMap<>();
     Map<Process, Set<WorkAreaType>> workAreaTypesByProcess = new HashMap<>();
 
+    Map<WorkAreaType, Map<WorkAreaType, Double>> minDistanceMap = new HashMap<>();
+    Map<WorkAreaType, Map<WorkAreaType, Double>> maxDistanceMap = new HashMap<>();
+
     buildStructures(req, request, periods, periodsById, requestPeriodsById, workAreaTypesByPeriod,
         workAreaTypesByPeriodHelper, processesById, requestProcessesById, processes,
         workAreaTypeById,
-        requestWorkAreaTypeById, workAreaTypesByProcess);
+        requestWorkAreaTypeById, workAreaTypesByProcess, minDistanceMap, maxDistanceMap);
 
     int facilities = 0;
     for (Period period : periods) {
@@ -354,7 +400,8 @@ public class AlgorithmServiceImpl implements AlgorithmService {
       }
     }
 
-    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities);
+    FLP flp = getFlp(req, periods, workAreaTypesByPeriod, facilities, minDistanceMap,
+        maxDistanceMap);
 
     GeneticAlgorithmResult[] results = flp.runGenetic(GeneticAlgorithmParameters.builder()
         .generations(req.getGenetic().getGenerations())
@@ -372,14 +419,22 @@ public class AlgorithmServiceImpl implements AlgorithmService {
     return results;
   }
 
-  private FLP getFlp(RequestProblem req, List<Period> periods,
-      Map<Period, List<WorkAreaType>> workAreaTypesByPeriod, int facilities) {
+  private FLP getFlp(
+      RequestProblem req,
+      List<Period> periods,
+      Map<Period, List<WorkAreaType>> workAreaTypesByPeriod,
+      int facilities,
+      Map<WorkAreaType, Map<WorkAreaType, Double>> minDistanceMap,
+      Map<WorkAreaType, Map<WorkAreaType, Double>> maxDistanceMap
+  ) {
     int value = req.getProblem().getMaxX();
+
     int bitSizeX = 0;
     while (value > 0) {
       bitSizeX++;
       value = value >> 1;
     }
+
     value = req.getProblem().getMaxY();
     int bitSizeY = 0;
     while (value > 0) {
@@ -395,6 +450,8 @@ public class AlgorithmServiceImpl implements AlgorithmService {
         .workAreaTypeByPeriod(workAreaTypesByPeriod)
         .maxX(req.getProblem().getMaxX())
         .maxY(req.getProblem().getMaxY())
+        .minDistanceMap(minDistanceMap)
+        .maxDistanceMap(maxDistanceMap)
         .build();
   }
 

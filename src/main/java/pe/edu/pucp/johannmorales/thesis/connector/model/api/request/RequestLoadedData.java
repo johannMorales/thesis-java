@@ -16,5 +16,7 @@ public class RequestLoadedData {
   private List<RequestWorkAreaType> workareatypes;
   private List<RequestProcessWorkAreaType> workareatypexprocess;
   private List<RequestWorkAreaStatic> workareasstatic;
+  private List<RequestRestriction> restrictionsMin;
+  private List<RequestRestriction> restrictionsMax;
 
 }
